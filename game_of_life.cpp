@@ -59,6 +59,7 @@ void GameOfLifeApplication::initVulkan()
 {
     createInstance();
     setupDebugMessenger();
+    pickPhysicalDevice();
 }
 
 void GameOfLifeApplication::mainLoop() 
@@ -76,3 +77,55 @@ void GameOfLifeApplication::cleanup()
     glfwTerminate();
 }
 
+bool GameOfLifeApplication::isDeviceSuitable(VkPhysicalDevice device)
+{
+    QueueFamilyIndices indices = findQueueFamilies(device);
+    return indices.isComplete();
+}
+
+void GameOfLifeApplication::pickPhysicalDevice()
+{
+    // Lets list all graphics card and query them; although in this implementation we will use the first one
+    uint32_t    device_count = 0; 
+    vkEnumeratePhysicalDevices(instance, &device_count, nullptr);
+
+    if (device_count == 0) // 0 devices with vulkan support no point going further
+        throw std::runtime_error("failed to find GPUs with Vulkan Support");
+    std::vector<VkPhysicalDevice> devices (device_count);
+    vkEnumeratePhysicalDevices(instance, &device_count, devices.data());
+
+    // Now lets evaluate each of them and see if they are suitable for operations we want to perform
+    for (const auto& device : devices)
+    {
+        if (isDeviceSuitable(device))
+        {
+            physicalDevice = device;
+            break ;
+        }
+    }
+    if (physicalDevice == VK_NULL_HANDLE)
+        throw std::runtime_error("Failed to find a suitable GPU");
+}
+
+QueueFamilyIndices GameOfLifeApplication::findQueueFamilies(VkPhysicalDevice device)
+{
+    QueueFamilyIndices      indices;
+
+    // just like other things in Vulkan, it follows the same flow 
+    uint32_t                queueFamilyCount = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+    int i = 0;
+    for (const auto& queueFamily: queueFamilies)
+    {
+        if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) // We need to find atleast one family that supports the Graphics bit 
+            indices.graphicsFamily = i;
+        if (indices.isComplete())
+            break ;
+        i++;
+    }
+    return indices;
+}

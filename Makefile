@@ -1,5 +1,5 @@
 # Compiler flags
-CXXFLAGS := -Wall -Wextra -std=c++14
+CXXFLAGS := -Wall -Wextra -std=c++17
 
 # Include directories
 INCLUDES := -I /usr/local/include 
