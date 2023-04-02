@@ -11,6 +11,9 @@ void GameOfLifeApplication::initWindow()
 
 void  GameOfLifeApplication::createInstance() 
 {
+    if (enableValidationLayers && !checkValidationLayerSupport())
+        throw std::runtime_error("Validation layers requested, but not available");
+    
     VkApplicationInfo       app_info = {};
 
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -24,22 +27,27 @@ void  GameOfLifeApplication::createInstance()
     create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     create_info.pApplicationInfo = &app_info;
 
-    uint32_t glfwExtensionCount = 0;
-    const char ** glfwExtensions;
-
-    glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-    // Mac might have incompatible drivers 
-    std::vector<const char *> requiredExtensions;
-
-    for (uint32_t i = 0; i < glfwExtensionCount; i++)
-        requiredExtensions.__emplace_back(glfwExtensions[i]);
-    requiredExtensions.__emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME); // Add instace enabled extension name
+    auto extensions = getRequiredExtensions();
+    
     create_info.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR; // Add bit to flags
+    create_info.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+    create_info.ppEnabledExtensionNames = extensions.data();
 
-    create_info.enabledExtensionCount = (uint32_t) requiredExtensions.size();
-    create_info.ppEnabledExtensionNames = requiredExtensions.data();
-    create_info.enabledLayerCount = 0;
+    // Debug Struct
+    VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
+    if (enableValidationLayers)
+    {
+        create_info.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+        create_info.ppEnabledLayerNames = validationLayers.data();
+
+        populateDebugMessengerCreateInfo(debugCreateInfo);
+        create_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT *) &debugCreateInfo;
+    }
+    else 
+    {
+        create_info.enabledLayerCount = 0;
+        create_info.pNext = nullptr;
+    }
 
     VkResult result = vkCreateInstance(&create_info, nullptr, &instance);
 
@@ -50,17 +58,21 @@ void  GameOfLifeApplication::createInstance()
 void GameOfLifeApplication::initVulkan() 
 {
     createInstance();
+    setupDebugMessenger();
 }
-
 
 void GameOfLifeApplication::mainLoop() 
 {
     while (!glfwWindowShouldClose(window))
         glfwPollEvents();
 }
+
 void GameOfLifeApplication::cleanup()
 {
+    if (enableValidationLayers) 
+       DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
     vkDestroyInstance(instance, nullptr);
     glfwDestroyWindow(window);
     glfwTerminate();
 }
+

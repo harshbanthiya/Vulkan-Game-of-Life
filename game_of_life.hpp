@@ -1,6 +1,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <cstdlib>
+#include <cstring>
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
 #include <glm/vec4.hpp>
@@ -11,7 +12,14 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
 const uint32_t WIDTH = 800;
-const uint32_t HEIGHT = 600; 
+const uint32_t HEIGHT = 600;
+const std::vector<const char *> validationLayers = {"VK_LAYER_KHRONOS_validation"};
+
+#ifdef NDEBUG
+    const bool enableValidationLayers = false;
+#else 
+    const bool enableValidationLayers = true;
+#endif
 
 class GameOfLifeApplication
 {
@@ -25,11 +33,18 @@ class GameOfLifeApplication
         }
 
     private: 
-        GLFWwindow*         window; 
-        VkInstance          instance;
-        void initWindow();
-        void initVulkan();
-        void createInstance();
-        void mainLoop();
-        void cleanup();
+        GLFWwindow*                             window; 
+        VkInstance                              instance;
+        VkDebugUtilsMessengerEXT                debugMessenger;
+        void                                    initWindow();
+        void                                    initVulkan();
+        void                                    createInstance();
+        void                                    mainLoop();
+        void                                    cleanup();
+        bool                                    checkValidationLayerSupport();
+        std::vector<const char*>                getRequiredExtensions();
+        void                                    populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
+        void                                    setupDebugMessenger();
+        VkResult                                CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
+        void                                    DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 };
