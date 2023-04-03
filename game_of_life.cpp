@@ -60,6 +60,7 @@ void GameOfLifeApplication::initVulkan()
     createInstance();
     setupDebugMessenger();
     pickPhysicalDevice();
+    createLogicalDevice();
 }
 
 void GameOfLifeApplication::mainLoop() 
@@ -70,6 +71,7 @@ void GameOfLifeApplication::mainLoop()
 
 void GameOfLifeApplication::cleanup()
 {
+    vkDestroyDevice(device, nullptr);
     if (enableValidationLayers) 
        DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
     vkDestroyInstance(instance, nullptr);
@@ -128,4 +130,41 @@ QueueFamilyIndices GameOfLifeApplication::findQueueFamilies(VkPhysicalDevice dev
         i++;
     }
     return indices;
+}
+
+void  GameOfLifeApplication::createLogicalDevice() // LOGICAL Device is the interface to the physical device
+{
+    QueueFamilyIndices  indices  = findQueueFamilies(physicalDevice);
+
+    // VkDevice Create info struct to describe number of queues we want for single queue family ; rn it is graphical only
+    VkDeviceQueueCreateInfo  queueCreateInfo{};
+    queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
+    queueCreateInfo.queueCount = 1;
+
+    // Vulkan lets you assign priorities to queues to influence the scheduling of command buffer execution using floating point numbers between 0.0 and 1.0. 
+    // This is required even if there is only a single queue:
+    float queuePriority = 1.0f;
+    queueCreateInfo.pQueuePriorities = &queuePriority;
+
+    VkPhysicalDeviceFeatures    deviceFeatures{}; // vkGetPhysicalDeviceFeatures will get specific features like geometry shaders and stuff rn we dont need it 
+    VkDeviceCreateInfo          createInfo{}; // Create logical device
+
+    createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    createInfo.pQueueCreateInfos = &queueCreateInfo;
+    createInfo.queueCreateInfoCount = 1;
+    createInfo.pEnabledFeatures = &deviceFeatures;
+    createInfo.enabledExtensionCount = 0;
+
+    if (enableValidationLayers) 
+    {
+        createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+        createInfo.ppEnabledLayerNames = validationLayers.data();
+    } else 
+        createInfo.enabledLayerCount = 0;
+    
+    if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS) 
+        throw std::runtime_error("Failed to create logical device!");
+
+    vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
 }
